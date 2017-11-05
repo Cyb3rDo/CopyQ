@@ -265,11 +265,13 @@ void Action::start()
     connect( m_processes.last(), SIGNAL(readyReadStandardOutput()),
              this, SLOT(onSubProcessOutput()) );
 
-    // Writing directly to stdin of a process on Windows can hang the app.
+    // FIXME: Writing directly to stdin of a process on Windows can hang the app.
+    //        Using Qt::QueuedConnection for following fixes the issue but
+    //        QCoreApplication::processEvents() needs to be called in waitForFinished().
     connect( m_processes.first(), SIGNAL(started()),
-             this, SLOT(writeInput()), Qt::QueuedConnection );
+             this, SLOT(writeInput()) );
     connect( m_processes.first(), SIGNAL(bytesWritten(qint64)),
-             this, SLOT(onBytesWritten()), Qt::QueuedConnection );
+             this, SLOT(onBytesWritten()) );
 
     if (m_outputFormat.isEmpty())
         m_processes.last()->closeReadChannel(QProcess::StandardOutput);
@@ -292,7 +294,6 @@ bool Action::waitForFinished(int msecs)
           waitMsec < msecs && !m_processes.isEmpty() && !m_processes.last()->waitForFinished(100);
           waitMsec += 100 )
     {
-        QCoreApplication::processEvents();
     }
 
     return !isRunning();
